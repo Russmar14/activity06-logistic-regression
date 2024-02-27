@@ -40,7 +40,7 @@ These data can be read from the `data` folder in this Day 2 folder and were orig
 **Notes**:
 
 - Similarly to the data you used for the logistic regression portion of this activity, the researchers have the variable labeled `gender`, but it is unclear how this question was asked or what categorizations (if any) were provided to respondents to select from.
-  We will use this as, "individuals that chose to provide their gender."
+  We will use this as, "individuals that chose to provide their gender." 
 - The authors use weighting to make the final sample more representative on the US population for their article.
   We will **not** use weighting in this activity, so we will treat the sample as a convenience sample rather than a random sample of the population.
 
@@ -52,18 +52,53 @@ Now...
   - `select` only the variables listed above to want to make viewing/managing the data (and the `augment` output later) easier.
 - Give your R code chunk a meaningful name, then run your code chunk or knit your document.
 
+```{r loading data and packages}
+library(tidyverse)
+library(tidymodels)
+nonvoters <- read_csv("data/nonvoters.csv")
+nonvoters <- nonvoters %>% select(ppage, educ, race, gender, income_cat, Q30, voter_category)
+glimpse(nonvoters)
+
+```
+
+
+
 After doing this, answer the following questions:
 
 1. Why do you think the authors chose to only include data from people who were eligible to vote for at least four election cycles?
 
+Maybe they wanted to get a good sample size to have some data to refer to - chances when they did or did not decide to vote.
 
 2. In the FiveThirtyEight article, the authors include visualizations of the relationship between the [voter category and demographic variables](https://projects.fivethirtyeight.com/non-voters-poll-2020-election/images/NONVOTERS-1026-1.png?v=411f25ea).
   Select two of these demographic variables.
   Then, for each variable, create and interpret a plot to describe its relationship with `voter_category`.
 
+```{r}
+ggplot(nonvoters, aes(x = ppage, y = voter_category)) + 
+  geom_count()
+
+ggplot(nonvoters, aes(x = race, y = voter_category)) + 
+  geom_count()
+```
 
 
 We need to do some data preparation before we fit our multinomial logistic regression model.
+```{r create party}
+#create new variable coding each person as one of Rep, Dem, Indep, or Other based on response to Q30.
+nonvoters <- nonvoters %>% mutate(party = case_when(
+    Q30 == 1 ~ "Republican",
+    Q30 == 2 ~ "Democrat",
+    Q30 == 3 ~ "Independent",
+    Q30 == 4 ~ "Other",
+    Q30 == 5 ~ "Other",
+    Q30 == -1 ~ "Other"
+  ))
+
+#relevel this var as a factor variable w/ rarely/never as reference level
+nonvoters$voter_category <- factor(nonvoters$voter_category, ordered = TRUE, levels = c("rarely/never", "sporadic", "always"))
+#note that the order defines the reference level (first) and subsequent order 
+
+```
 
 - Create a new R code chunk and address these items:
   - The variable `Q30` contains the respondent’s political party identification.
@@ -73,6 +108,12 @@ We need to do some data preparation before we fit our multinomial logistic regre
 - Then, run your code chunk or knit your document.
   Check that your changes are correct by creating a stacked bar graph using your new `Q30` variable as the $y$-axis and the `voter_category` represented with different colors.
   **Challenge**: Can you use the same color palette (*hint*: this is a handy tool, https://pickcoloronline.com/) that $\texttt{FiveThirthyEight}$ used in their article?
+  
+```{r}
+ggplot(nonvoters, aes(x = voter_category, fill = party, y = party)) + 
+  geom_bar(position = "stack", stat = "identity") 
+```
+
 
 ## Fitting the model
 
